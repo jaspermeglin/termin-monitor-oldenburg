@@ -1,0 +1,33 @@
+# systemd-Service: Dauerbetrieb mit internem 10-Minuten-Intervall (empfohlen).
+#
+# Installation:
+#   sudo cp deploy/fs-monitor.service /etc/systemd/system/
+#   # Pfade unten an deine Installation anpassen!
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now fs-monitor.service
+#   journalctl -u fs-monitor -f        # Live-Logs
+#
+[Unit]
+Description=Termin-Monitor Fuehrerscheinstelle Oldenburg
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# --- anpassen ---
+User=fsmonitor
+WorkingDirectory=/opt/fs-monitor
+ExecStart=/opt/fs-monitor/.venv/bin/python -m src.monitor --loop
+# ----------------
+Restart=on-failure
+RestartSec=60
+Environment=PYTHONUNBUFFERED=1
+
+# Härtung (optional)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/fs-monitor/logs /opt/fs-monitor/state
+
+[Install]
+WantedBy=multi-user.target

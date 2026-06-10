@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jasper.fs-monitor</string>
+
+    <!-- Bei jedem Lauf EIN Prüf-Zyklus; launchd übernimmt das 10-Minuten-Timing. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/jasper/Führerscheinstelle Automation/.venv/bin/python</string>
+        <string>-m</string>
+        <string>src.monitor</string>
+        <string>--once</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/jasper/Führerscheinstelle Automation</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PYTHONUNBUFFERED</key>
+        <string>1</string>
+    </dict>
+
+    <!-- alle 600 s = 10 min; läuft sofort beim Laden/Login einmal -->
+    <key>StartInterval</key>
+    <integer>600</integer>
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/jasper/Führerscheinstelle Automation/logs/launchd.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/jasper/Führerscheinstelle Automation/logs/launchd.err.log</string>
+</dict>
+</plist>

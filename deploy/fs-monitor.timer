@@ -1,0 +1,22 @@
+# systemd-Timer: startet fs-monitor-once.service alle 10 Minuten.
+#
+# Installation:
+#   sudo cp deploy/fs-monitor-once.service /etc/systemd/system/
+#   sudo cp deploy/fs-monitor.timer        /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now fs-monitor.timer
+#   systemctl list-timers fs-monitor.timer
+#
+[Unit]
+Description=Startet den Termin-Monitor alle 10 Minuten
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+# leichte Streuung, damit nicht exakt auf die Minute gepollt wird
+RandomizedDelaySec=60
+AccuracySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

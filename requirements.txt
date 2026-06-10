@@ -1,0 +1,6 @@
+# Termin-Monitor Führerscheinstelle Oldenburg
+# Browser danach installieren:  playwright install chromium
+#   (auf dem VPS einmalig mit System-Libs:  playwright install --with-deps chromium)
+playwright==1.60.0
+python-dotenv>=1.0,<2.0
+requests>=2.31,<3.0

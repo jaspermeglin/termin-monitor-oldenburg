@@ -1,0 +1,16 @@
+# Alternative zum Loop: Oneshot-Service, der von fs-monitor.timer alle 10 min
+# gestartet wird. Nutze ENTWEDER fs-monitor.service (Loop) ODER dieses Paar
+# (fs-monitor-once.service + fs-monitor.timer) – nicht beides.
+[Unit]
+Description=Termin-Monitor Fuehrerscheinstelle Oldenburg (ein Durchlauf)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# --- anpassen ---
+User=fsmonitor
+WorkingDirectory=/opt/fs-monitor
+ExecStart=/opt/fs-monitor/.venv/bin/python -m src.monitor --once
+# ----------------
+Environment=PYTHONUNBUFFERED=1

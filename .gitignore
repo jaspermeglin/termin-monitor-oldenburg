@@ -1,0 +1,19 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Secrets & runtime data
+.env
+logs/
+state/
+
+# Dev exploration artifacts
+scripts/_explore_out/
+
+# Tooling / lokale Session-Daten (nicht ins Repo)
+.claude-flow/
+
+# OS
+.DS_Store
