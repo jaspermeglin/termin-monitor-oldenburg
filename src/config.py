@@ -30,6 +30,8 @@ class Settings:
     poll_jitter_seconds: int
     headless: bool
     service_id: str
+    funktionseinheit: str
+    anliegen_category: str
     base_url: str
     booking_url: str
     log_file: Path
@@ -91,6 +93,8 @@ def load_settings(env_file: str | os.PathLike | None = None) -> Settings:
         poll_jitter_seconds=int(os.getenv("POLL_JITTER_SECONDS", "45")),
         headless=os.getenv("HEADLESS", "true").lower() not in ("0", "false", "no"),
         service_id=os.getenv("SERVICE_ID", "301").strip(),
+        funktionseinheit=os.getenv("FUNKTIONSEINHEIT", "2").strip(),
+        anliegen_category=os.getenv("ANLIEGEN_CATEGORY", "").strip(),
         base_url=base_url,
         booking_url=booking_url,
         log_file=_resolve(os.getenv("LOG_FILE", "logs/monitor.log")),

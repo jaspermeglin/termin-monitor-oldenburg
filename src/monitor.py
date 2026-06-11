@@ -57,10 +57,9 @@ def format_hit_lines(hit_days: list[DayInfo]) -> list[str]:
 
 def build_hit_body(settings: Settings, hit_days: list[DayInfo]) -> str:
     return (
-        "Früherer Termin in der Führerscheinstelle Oldenburg verfügbar!\n\n"
+        "Früherer Termin im Bürgerbüro Oldenburg verfügbar (Kfz-Anmeldung)!\n\n"
         + "\n".join(format_hit_lines(hit_days))
-        + f"\n\nDein aktueller Termin: {settings.current_appointment.strftime('%d.%m.%Y')}"
-        + f"\nZielfenster: {settings.target_start.strftime('%d.%m.%Y')}"
+        + f"\n\nZielfenster: {settings.target_start.strftime('%d.%m.%Y')}"
         + f"–{settings.target_end.strftime('%d.%m.%Y')}"
         + f"\n\nJetzt selbst buchen: {settings.booking_url}"
     )

@@ -46,13 +46,15 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
           NTFY_SERVER: "https://ntfy.sh"
-          # Persönliche Werte liegen als verschlüsselte Secrets (nicht im öffentlichen Code):
+          # Bürgerbüro Oldenburg, Anliegen Kfz-Anmeldung/Umschreibung (240):
+          FUNKTIONSEINHEIT: "1"
+          ANLIEGEN_CATEGORY: "KFZ-Angelegenheiten"
+          SERVICE_ID: "240"
+          # Persönliche Werte (Zielfenster) liegen als verschlüsselte Secrets:
           TARGET_START: ${{ secrets.TARGET_START }}
           TARGET_END: ${{ secrets.TARGET_END }}
-          CURRENT_APPOINTMENT: ${{ secrets.CURRENT_APPOINTMENT }}
-          BOOKING_URL: "https://terminvereinbarung.oldenburg.de/select2?md=2"
+          BOOKING_URL: "https://terminvereinbarung.oldenburg.de/select2?md=1"
           POLL_INTERVAL_MINUTES: "10"
-          VALIDATION_PING: "1"        # einmaliger Funktionstest-Ping beim nächsten freien Termin
           STATE_FILE: "state/state.json"
           LOG_FILE: "logs/monitor.log"
         run: python -m src.monitor --${{ github.event.inputs.mode || 'once' }}

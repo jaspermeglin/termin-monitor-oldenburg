@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import src.monitor as monitor  # noqa: E402
 from src.config import Settings  # noqa: E402
 from src.monitor import build_hit_body, dates_in_window, format_hit_lines  # noqa: E402
-from src.scraper import CycleResult, parse_days  # noqa: E402
+from src.scraper import CycleResult, parse_days, parse_locations  # noqa: E402
 
 
 class _Recorder:
@@ -38,6 +38,8 @@ def make_settings(**kw) -> Settings:
         poll_jitter_seconds=45,
         headless=True,
         service_id="301",
+        funktionseinheit="1",
+        anliegen_category="KFZ-Angelegenheiten",
         base_url="https://terminvereinbarung.oldenburg.de/",
         booking_url="https://terminvereinbarung.oldenburg.de/select2?md=2",
         log_file=Path("logs/monitor.log"),
@@ -57,6 +59,16 @@ def test_parse_days_extracts_dates_and_times():
     days = parse_days(raw)
     assert [d.day for d in days] == [date(2026, 6, 30), date(2026, 7, 1)]
     assert days[0].times == ["08:00", "08:15"]
+
+
+def test_parse_locations_reads_earliest_per_location():
+    headers = [
+        "1: Bürgerbüro Nord, Termine ab 12.06.2026, 08:30 Uhr",
+        "2: Bürgerbüro Mitte, Termine ab 23.06.2026, 08:30 Uhr",
+    ]
+    locs = parse_locations(headers)
+    assert [loc.day for loc in locs] == [date(2026, 6, 12), date(2026, 6, 23)]
+    assert "Nord" in locs[0].label and "12.06.2026" in locs[0].label
 
 
 def test_no_hit_when_only_later_dates():
@@ -85,7 +97,7 @@ def test_hit_inside_window():
 
     body = build_hit_body(settings, hit_days)
     assert "22.06.2026" in body
-    assert "26.06.2026" in body  # current appointment mentioned
+    assert "18.06.2026" in body  # Zielfenster-Start erwähnt
 
 
 def test_boundary_dates_are_inclusive():

@@ -65,6 +65,12 @@ DAY_HEADER_JS = r"""() => {
   return out;
 }"""
 
+# Bürgerbüro: one accordion header per location, e.g.
+# "1: Bürgerbüro Nord, Termine ab 12.06.2026, 08:30 Uhr".
+LOCATION_HEADER_JS = r"""() => [...document.querySelectorAll('.ui-accordion-header')]
+  .map(e => (e.textContent || '').replace(/\s+/g, ' ').trim())
+  .filter(t => /Termine ab\s+\d{1,2}\.\d{2}\.\d{4}/i.test(t))"""
+
 # OK status values:
 STATUS_OK = "ok"
 STATUS_CAPTCHA = "captcha"
@@ -128,6 +134,33 @@ def parse_days(raw: list[dict]) -> list[DayInfo]:
     return days
 
 
+LOCATION_DATE_RE = re.compile(r"Termine ab\s+(\d{1,2})\.(\d{2})\.(\d{4})", re.I)
+
+
+def parse_locations(headers: list[str]) -> list[DayInfo]:
+    """Bürgerbüro: each location header states its earliest free date. Turn them
+    into DayInfos keyed by that date (label keeps the location name for alerts)."""
+    days: list[DayInfo] = []
+    for header in headers:
+        match = LOCATION_DATE_RE.search(header)
+        if not match:
+            continue
+        d, mo, y = int(match.group(1)), int(match.group(2)), int(match.group(3))
+        try:
+            earliest = date(y, mo, d)
+        except ValueError:
+            continue
+        name = header[: match.start()].strip().rstrip(",").strip()
+        name = re.sub(r"^\d+\s*[:.]\s*", "", name) or "Standort"
+        days.append(DayInfo(
+            day=earliest,
+            label=f"{name} – frühester Termin {earliest.strftime('%d.%m.%Y')}",
+            times=[],
+        ))
+    days.sort(key=lambda x: x.day)
+    return days
+
+
 def _check_captcha(page) -> None:
     try:
         body = page.inner_text("body").lower()
@@ -169,13 +202,27 @@ def check_once(settings: Settings) -> CycleResult:
             except Exception:  # noqa: BLE001
                 pass
 
-            # Schritt 1 -> 2: choose Führerscheinstelle.
-            _require(page, "#buttonfunktionseinheit-2", "Funktionseinheit Führerscheinstelle").click()
+            # Schritt 1 -> 2: choose the functional unit (1 = Bürgerbüro, 2 = Führerscheinstelle).
+            fe = page.locator(f"#buttonfunktionseinheit-{settings.funktionseinheit}")
+            if fe.count() == 0:
+                raise StructureError(f"Funktionseinheit-Button {settings.funktionseinheit} nicht gefunden")
+            fe.first.click()
             page.wait_for_load_state("networkidle")
             _check_captcha(page)
 
-            # Schritt 2: select the service (qty -> 1) and continue.
-            plus = _require(page, f"#button-plus-{sid}", f"Anliegen-Plus (ID {sid})")
+            # Schritt 2: expand the Anliegen category (accordion) if configured, then
+            # select the service (qty -> 1) and continue.
+            if settings.anliegen_category:
+                cat = page.locator("h3.ui-accordion-header", has_text=settings.anliegen_category)
+                if cat.count() == 0:
+                    raise StructureError(f"Anliegen-Kategorie '{settings.anliegen_category}' nicht gefunden")
+                cat.first.click()
+
+            plus = page.locator(f"#button-plus-{sid}")
+            try:
+                plus.wait_for(state="visible", timeout=10000)
+            except PWTimeout as ex:
+                raise StructureError(f"Anliegen {sid} nicht sichtbar (Kategorie nicht aufgeklappt?)") from ex
             plus.click()
             try:
                 if page.locator(f"#input-{sid}").input_value() == "0":
@@ -204,18 +251,10 @@ def check_once(settings: Settings) -> CycleResult:
                 raise StructureError("OK blieb deaktiviert (Checkboxen nicht alle aktivierbar)") from ex
             ok.click()
 
-            # Schritt 3: single location -> confirm.
+            # Schritt 3: location step. Each location is an accordion header whose text
+            # states the earliest free date ("... Termine ab DD.MM.YYYY ...").
             try:
                 page.wait_for_function("() => /Schritt 3/.test(document.title)", timeout=settings.nav_timeout_ms)
-            except PWTimeout as ex:
-                raise StructureError(f"Schritt 3 nicht erreicht (Titel: {page.title()!r})") from ex
-            page.wait_for_load_state("networkidle")
-            _check_captcha(page)
-            _require(page, "#WeiterButton", "Weiter (Standort)").click()
-
-            # Schritt 4: read offered days.
-            try:
-                page.wait_for_function("() => /Schritt 4/.test(document.title)", timeout=settings.nav_timeout_ms)
             except PWTimeout:
                 body = ""
                 try:
@@ -224,16 +263,16 @@ def check_once(settings: Settings) -> CycleResult:
                     pass
                 if any(m in body for m in NO_SLOTS_MARKERS):
                     return CycleResult(status=STATUS_OK, days=[], message="Keine Termine angeboten.")
-                raise StructureError(f"Schritt 4 nicht erreicht (Titel: {page.title()!r})")
+                raise StructureError(f"Schritt 3 nicht erreicht (Titel: {page.title()!r})")
             page.wait_for_load_state("networkidle")
             _check_captcha(page)
 
-            raw = page.evaluate(DAY_HEADER_JS)
-            days = parse_days(raw)
+            headers = page.evaluate(LOCATION_HEADER_JS)
+            days = parse_locations(headers)
             return CycleResult(
                 status=STATUS_OK,
                 days=days,
-                message=f"{len(days)} Tag(e) angeboten.",
+                message=f"{len(days)} Standort(e) mit Terminen.",
             )
 
         except CaptchaDetected as ex:
