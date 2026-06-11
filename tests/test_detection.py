@@ -69,6 +69,7 @@ def test_parse_locations_reads_earliest_per_location():
     locs = parse_locations(headers)
     assert [loc.day for loc in locs] == [date(2026, 6, 12), date(2026, 6, 23)]
     assert "Nord" in locs[0].label and "12.06.2026" in locs[0].label
+    assert locs[0].times == ["08:30 Uhr"]  # Datum + Uhrzeit aus dem Standort-Kopf
 
 
 def test_no_hit_when_only_later_dates():

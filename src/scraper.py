@@ -134,12 +134,14 @@ def parse_days(raw: list[dict]) -> list[DayInfo]:
     return days
 
 
-LOCATION_DATE_RE = re.compile(r"Termine ab\s+(\d{1,2})\.(\d{2})\.(\d{4})", re.I)
+# "... Termine ab 12.06.2026, 08:00 Uhr" -> earliest date + earliest time.
+LOCATION_DATE_RE = re.compile(r"Termine ab\s+(\d{1,2})\.(\d{2})\.(\d{4})(?:,?\s*(\d{1,2}:\d{2}))?", re.I)
 
 
 def parse_locations(headers: list[str]) -> list[DayInfo]:
-    """Bürgerbüro: each location header states its earliest free date. Turn them
-    into DayInfos keyed by that date (label keeps the location name for alerts)."""
+    """Bürgerbüro: each location header states its earliest free date AND time
+    ("Bürgerbüro Nord, Termine ab 12.06.2026, 08:00 Uhr"). Turn them into DayInfos
+    carrying both, so the alert can show the concrete appointment."""
     days: list[DayInfo] = []
     for header in headers:
         match = LOCATION_DATE_RE.search(header)
@@ -152,10 +154,11 @@ def parse_locations(headers: list[str]) -> list[DayInfo]:
             continue
         name = header[: match.start()].strip().rstrip(",").strip()
         name = re.sub(r"^\d+\s*[:.]\s*", "", name) or "Standort"
+        times = [f"{match.group(4)} Uhr"] if match.group(4) else []
         days.append(DayInfo(
             day=earliest,
-            label=f"{name} – frühester Termin {earliest.strftime('%d.%m.%Y')}",
-            times=[],
+            label=f"{name} – {earliest.strftime('%d.%m.%Y')}",
+            times=times,
         ))
     days.sort(key=lambda x: x.day)
     return days
