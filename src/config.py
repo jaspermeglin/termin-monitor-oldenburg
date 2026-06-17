@@ -37,6 +37,7 @@ class Settings:
     log_file: Path
     state_file: Path
     nav_timeout_ms: int
+    alert_subject: str = "Termin Oldenburg"
     validation_ping: bool = False
 
     @property
@@ -100,5 +101,6 @@ def load_settings(env_file: str | os.PathLike | None = None) -> Settings:
         log_file=_resolve(os.getenv("LOG_FILE", "logs/monitor.log")),
         state_file=_resolve(os.getenv("STATE_FILE", "state/state.json")),
         nav_timeout_ms=int(os.getenv("NAV_TIMEOUT_MS", "25000")),
+        alert_subject=os.getenv("ALERT_SUBJECT", "Termin Oldenburg").strip() or "Termin Oldenburg",
         validation_ping=os.getenv("VALIDATION_PING", "").strip().lower() not in ("", "0", "false", "no"),
     )

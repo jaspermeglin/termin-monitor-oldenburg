@@ -57,7 +57,7 @@ def format_hit_lines(hit_days: list[DayInfo]) -> list[str]:
 
 def build_hit_body(settings: Settings, hit_days: list[DayInfo]) -> str:
     return (
-        "Früherer Termin im Bürgerbüro Oldenburg verfügbar (Kfz-Anmeldung)!\n\n"
+        f"Früherer Termin verfügbar — {settings.alert_subject}!\n\n"
         + "\n".join(format_hit_lines(hit_days))
         + f"\n\nZielfenster: {settings.target_start.strftime('%d.%m.%Y')}"
         + f"–{settings.target_end.strftime('%d.%m.%Y')}"
