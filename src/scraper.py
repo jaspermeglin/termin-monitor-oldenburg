@@ -234,25 +234,25 @@ def check_once(settings: Settings) -> CycleResult:
                 pass
             _require(page, "#WeiterButton", "Weiter (Anliegen)").click()
 
-            # Modal: confirm all required-document checkboxes, then OK.
+            # Required-documents modal: most Anliegen show one (tick every checkbox,
+            # then OK). A few don't — in that case just continue.
             ok = page.locator("#OKButton")
             try:
-                ok.wait_for(state="visible", timeout=settings.nav_timeout_ms)
-            except PWTimeout as ex:
-                raise StructureError("Hinweis-Modal (#OKButton) erschien nicht") from ex
-            labels = page.locator("label.labelChecklist")
-            n_labels = labels.count()
-            if n_labels == 0:
-                raise StructureError("Keine Checkbox-Labels (label.labelChecklist) im Modal")
-            for i in range(n_labels):
-                lab = labels.nth(i)
-                lab.scroll_into_view_if_needed()
-                lab.click()
-            try:
-                page.wait_for_selector("#OKButton:not([aria-disabled='true'])", timeout=8000)
-            except PWTimeout as ex:
-                raise StructureError("OK blieb deaktiviert (Checkboxen nicht alle aktivierbar)") from ex
-            ok.click()
+                ok.wait_for(state="visible", timeout=8000)
+                has_modal = True
+            except PWTimeout:
+                has_modal = False
+            if has_modal:
+                labels = page.locator("label.labelChecklist")
+                for i in range(labels.count()):
+                    lab = labels.nth(i)
+                    lab.scroll_into_view_if_needed()
+                    lab.click()
+                try:
+                    page.wait_for_selector("#OKButton:not([aria-disabled='true'])", timeout=8000)
+                except PWTimeout as ex:
+                    raise StructureError("OK blieb deaktiviert (Checkboxen nicht alle aktivierbar)") from ex
+                ok.click()
 
             # Schritt 3: location step. Each location is an accordion header whose text
             # states the earliest free date ("... Termine ab DD.MM.YYYY ...").
@@ -270,12 +270,39 @@ def check_once(settings: Settings) -> CycleResult:
             page.wait_for_load_state("networkidle")
             _check_captcha(page)
 
+            # Two layouts: Bürgerbüro shows a multi-location accordion ("Termine ab
+            # DD.MM." per location); Führerscheinstelle has a single location and a
+            # Weiter button leading to a Schritt-4 day calendar.
             headers = page.evaluate(LOCATION_HEADER_JS)
-            days = parse_locations(headers)
+            if headers:
+                days = parse_locations(headers)
+                return CycleResult(
+                    status=STATUS_OK,
+                    days=days,
+                    message=f"{len(days)} Standort(e) mit Terminen.",
+                )
+
+            # Single-location flow: confirm the location, then read the day calendar.
+            _require(page, "#WeiterButton", "Weiter (Standort)").click()
+            try:
+                page.wait_for_function("() => /Schritt 4/.test(document.title)", timeout=settings.nav_timeout_ms)
+            except PWTimeout:
+                body = ""
+                try:
+                    body = page.inner_text("body").lower()
+                except Exception:  # noqa: BLE001
+                    pass
+                if any(m in body for m in NO_SLOTS_MARKERS):
+                    return CycleResult(status=STATUS_OK, days=[], message="Keine Termine angeboten.")
+                raise StructureError(f"Schritt 4 nicht erreicht (Titel: {page.title()!r})")
+            page.wait_for_load_state("networkidle")
+            _check_captcha(page)
+            raw = page.evaluate(DAY_HEADER_JS)
+            days = parse_days(raw)
             return CycleResult(
                 status=STATUS_OK,
                 days=days,
-                message=f"{len(days)} Standort(e) mit Terminen.",
+                message=f"{len(days)} Tag(e) angeboten.",
             )
 
         except CaptchaDetected as ex:
